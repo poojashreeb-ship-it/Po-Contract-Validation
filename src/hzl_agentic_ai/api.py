@@ -11,6 +11,7 @@ import base64
 import io
 import json
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -33,7 +34,23 @@ from .schemas import (
     ValidationReportBundle,
 )
 
-app = FastAPI(title="HZL Agentic AI")
+_REQUIRED_ENV_VARS = ("MODEL", "OPENROUTER_API_KEY", "API_KEY")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    missing = [name for name in _REQUIRED_ENV_VARS if not os.environ.get(name)]
+    if missing:
+        raise RuntimeError(
+            f"Missing required environment variable(s): {', '.join(missing)}. "
+            "Set them in .env locally, or in your deployment platform's environment "
+            "variable settings (e.g. Vercel project -> Settings -> Environment Variables), "
+            "then redeploy."
+        )
+    yield
+
+
+app = FastAPI(title="HZL Agentic AI", lifespan=lifespan)
 
 # Every data-bearing route requires X-API-Key (see auth.py) except GET / below,
 # which serves no PO/contract/SAP data — just the frontend page, which embeds
