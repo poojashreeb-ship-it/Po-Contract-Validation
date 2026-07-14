@@ -1,0 +1,6 @@
+.env
+__pycache__/
+.venv/
+output/
+scratch/
+request.json
