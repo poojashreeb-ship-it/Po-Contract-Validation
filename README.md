@@ -1,6 +1,6 @@
-# HZL Agentic AI
+# Agentic AI
 
-Agentic AI layer for the Hindustan Zinc Limited PO/Contract validation automation.
+Agentic AI layer for the PO/Contract validation automation.
 The RPA shell (UiPath) owns document download, filenames, audit logging, the VIM
 hand-off, and notifications/retries. This service only handles the steps that
 need LLM judgment rather than deterministic rules:
