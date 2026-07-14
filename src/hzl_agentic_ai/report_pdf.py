@@ -5,6 +5,7 @@ response already carries — no new fields, no new judgment calls, just a
 table layout for each report's field-by-field ledger so the same result
 can be read outside of curl/Postman.
 """
+import io
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -39,7 +40,10 @@ def _cell(text: str, style: ParagraphStyle, color_hex: str | None = None) -> Par
     return Paragraph(safe, style)
 
 
-def write_report_pdf(bundle: ValidationReportBundle, output_path: Path) -> None:
+def render_report_pdf(bundle: ValidationReportBundle) -> bytes:
+    """Builds the PDF fully in memory — no filesystem dependency, since the
+    caller may be a serverless environment with no persistent/writable disk
+    between requests (see api.py's inline base64 delivery)."""
     styles = getSampleStyleSheet()
     header_style = ParagraphStyle("cellHeader", parent=styles["Normal"], fontSize=8, leading=10, textColor=colors.white)
     cell_style = ParagraphStyle("cell", parent=styles["Normal"], fontSize=8, leading=10)
@@ -99,12 +103,21 @@ def write_report_pdf(bundle: ValidationReportBundle, output_path: Path) -> None:
         story.append(table)
         story.append(Spacer(1, 16))
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    buffer = io.BytesIO()
     SimpleDocTemplate(
-        str(output_path),
+        buffer,
         pagesize=A4,
         leftMargin=_MARGIN,
         rightMargin=_MARGIN,
         topMargin=_MARGIN,
         bottomMargin=_MARGIN,
     ).build(story)
+    return buffer.getvalue()
+
+
+def write_report_pdf(bundle: ValidationReportBundle, output_path: Path) -> None:
+    """Local-dev convenience only — saves the same bytes render_report_pdf
+    produces to disk for manual inspection (see CLAUDE.md's output/ folder
+    convention). Not used for serving downloads; see api.py."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(render_report_pdf(bundle))

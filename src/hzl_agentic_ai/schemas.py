@@ -90,3 +90,14 @@ class DiscrepancySummary(BaseModel):
 class ValidationReportBundle(BaseModel):
     generated_at: str
     reports: list[DiscrepancySummary]
+
+
+class FullReportWithPdf(BaseModel):
+    """Response shape for the browser frontend's upload flow (see api.py's
+    /ui/process-full-report and frontend.py). The PDF rendition is delivered
+    inline as base64 rather than via a separate download endpoint, since a
+    serverless deployment has no persistent filesystem to hand it back from
+    on a later request."""
+
+    report: ValidationReportBundle
+    pdf_base64: str

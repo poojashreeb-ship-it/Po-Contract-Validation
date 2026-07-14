@@ -279,13 +279,13 @@ function clearStatus() {
   });
 });
 
-async function downloadFile(path, filename) {
-  const res = await fetch(path, { headers: { "X-API-Key": API_KEY } });
-  if (!res.ok) {
-    setStatus("Download failed: " + res.status + " " + (await res.text()), "error");
-    return;
-  }
-  const blob = await res.blob();
+// Downloads are built client-side from the last process response — no
+// separate fetch to the server, since a serverless deployment has no
+// persistent file to fetch back on a later request.
+let lastReport = null;
+let lastPdfBase64 = null;
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -297,10 +297,12 @@ async function downloadFile(path, filename) {
 }
 
 document.getElementById("download-json").addEventListener("click", () => {
-  downloadFile("/ui/download/json", "full_report.json");
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" });
+  downloadBlob(blob, "full_report.json");
 });
 document.getElementById("download-pdf").addEventListener("click", () => {
-  downloadFile("/ui/download/pdf", "full_report.pdf");
+  const bytes = Uint8Array.from(atob(lastPdfBase64), (c) => c.charCodeAt(0));
+  downloadBlob(new Blob([bytes], { type: "application/pdf" }), "full_report.pdf");
 });
 
 const STATUS_ICON = { PASS: "✅", PASS_WITH_WARNINGS: "⚠️", FAIL: "❌" };
@@ -326,8 +328,10 @@ form.addEventListener("submit", async (event) => {
       setStatus("Failed (" + res.status + ")\n" + detail, "error");
       return;
     }
-    const bundle = await res.json();
-    const lines = bundle.reports.map(
+    const data = await res.json();
+    lastReport = data.report;
+    lastPdfBase64 = data.pdf_base64;
+    const lines = lastReport.reports.map(
       (r) => (STATUS_ICON[r.overall_status] || "") + " " + r.validation_type + ": " + r.overall_status
     );
     setStatus("Done.\n" + lines.join("\n"), "ok");

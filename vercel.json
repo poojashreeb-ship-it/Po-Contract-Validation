@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/hzl_agentic_ai/api.py": {
+      "maxDuration": 300
+    }
+  }
+}
