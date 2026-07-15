@@ -7,7 +7,6 @@ workflow with cross-step state. The graph structure is fixed; only the
 system prompt (role/goal/backstory from agents.yaml) and the structured
 output schema vary per call.
 """
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, TypedDict
@@ -17,6 +16,8 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
+
+from .env import required_env
 
 load_dotenv()
 
@@ -42,10 +43,10 @@ def _llm() -> ChatOpenAI:
     # MODEL is an OpenRouter-style "openrouter/vendor/model" string (see
     # README setup); ChatOpenAI just wants the vendor/model part, with
     # OpenRouter's OpenAI-compatible endpoint as the base URL.
-    model = os.environ["MODEL"].removeprefix("openrouter/")
+    model = required_env("MODEL").removeprefix("openrouter/")
     return ChatOpenAI(
         model=model,
-        api_key=os.environ["OPENROUTER_API_KEY"],
+        api_key=required_env("OPENROUTER_API_KEY"),
         base_url="https://openrouter.ai/api/v1",
     )
 

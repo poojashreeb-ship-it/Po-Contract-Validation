@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse
 
 from .auth import verify_api_key
 from .comparison import compare_po_vs_contract, compare_po_vs_sap
+from .env import required_env
 from .extraction import extract_contract, extract_purchase_order
 from .frontend import render_page
 from .pdf import extract_text_from_pdf
@@ -39,7 +40,7 @@ _REQUIRED_ENV_VARS = ("MODEL", "OPENROUTER_API_KEY", "API_KEY")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    missing = [name for name in _REQUIRED_ENV_VARS if not os.environ.get(name)]
+    missing = [name for name in _REQUIRED_ENV_VARS if not (os.environ.get(name) or "").lstrip("﻿")]
     if missing:
         raise RuntimeError(
             f"Missing required environment variable(s): {', '.join(missing)}. "
@@ -92,7 +93,7 @@ def _save_report_files(bundle: ValidationReportBundle, name: str) -> None:
 
 @app.get("/", response_class=HTMLResponse)
 async def frontend_page() -> str:
-    return render_page(os.environ["API_KEY"])
+    return render_page(required_env("API_KEY"))
 
 
 @protected.post("/extract/purchase-order", response_model=PurchaseOrderFields)
