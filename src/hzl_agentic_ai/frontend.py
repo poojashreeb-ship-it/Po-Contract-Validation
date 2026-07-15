@@ -159,10 +159,11 @@ _PAGE = Template(r"""<!doctype html>
   #downloads {
     margin-top: 1.1rem;
     display: none;
+    flex-wrap: wrap;
     gap: 0.75rem;
   }
   #downloads button {
-    flex: 1;
+    flex: 1 1 calc(50% - 0.375rem);
     padding: 0.65rem 1rem;
     font-size: 0.9rem;
     font-weight: 600;
@@ -224,8 +225,10 @@ _PAGE = Template(r"""<!doctype html>
     <div id="status"></div>
 
     <div id="downloads">
-      <button type="button" id="download-json">⬇ JSON</button>
-      <button type="button" id="download-pdf">⬇ PDF</button>
+      <button type="button" id="preview-json">👁 Preview JSON</button>
+      <button type="button" id="preview-pdf">👁 Preview PDF</button>
+      <button type="button" id="download-json">⬇ Download JSON</button>
+      <button type="button" id="download-pdf">⬇ Download PDF</button>
     </div>
   </div>
 
@@ -285,6 +288,14 @@ function clearStatus() {
 let lastReport = null;
 let lastPdfBase64 = null;
 
+function jsonBlob() {
+  return new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" });
+}
+function pdfBlob() {
+  const bytes = Uint8Array.from(atob(lastPdfBase64), (c) => c.charCodeAt(0));
+  return new Blob([bytes], { type: "application/pdf" });
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -296,14 +307,18 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-document.getElementById("download-json").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" });
-  downloadBlob(blob, "full_report.json");
-});
-document.getElementById("download-pdf").addEventListener("click", () => {
-  const bytes = Uint8Array.from(atob(lastPdfBase64), (c) => c.charCodeAt(0));
-  downloadBlob(new Blob([bytes], { type: "application/pdf" }), "full_report.pdf");
-});
+// Preview opens the blob in a new tab with no `download` attribute, so the
+// browser renders it inline (its built-in JSON viewer / PDF viewer) instead
+// of saving it — the object URL is left unrevoked since the new tab needs it
+// to stay valid after this handler returns.
+function previewBlob(blob) {
+  window.open(URL.createObjectURL(blob), "_blank");
+}
+
+document.getElementById("preview-json").addEventListener("click", () => previewBlob(jsonBlob()));
+document.getElementById("preview-pdf").addEventListener("click", () => previewBlob(pdfBlob()));
+document.getElementById("download-json").addEventListener("click", () => downloadBlob(jsonBlob(), "full_report.json"));
+document.getElementById("download-pdf").addEventListener("click", () => downloadBlob(pdfBlob(), "full_report.pdf"));
 
 const STATUS_ICON = { PASS: "✅", PASS_WITH_WARNINGS: "⚠️", FAIL: "❌" };
 
